@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Spell, Character, SpellListItem } from '../types'
 
@@ -108,19 +108,67 @@ const SpellbookContext = createContext<SpellbookContextValue | null>(null)
 export function SpellbookProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(spellbookReducer, initialState)
 
-  const value: SpellbookContextValue = {
-    state,
-    setCharacter: (character) => dispatch({ type: 'SET_CHARACTER', payload: character }),
-    addSpell: (spell) => dispatch({ type: 'ADD_SPELL', payload: spell }),
-    removeSpell: (spellId) => dispatch({ type: 'REMOVE_SPELL', payload: spellId }),
-    setSelectedSpells: (spells) => dispatch({ type: 'SET_SELECTED_SPELLS', payload: spells }),
-    setAvailableSpells: (spells) => dispatch({ type: 'SET_AVAILABLE_SPELLS', payload: spells }),
-    clearSpellbook: () => dispatch({ type: 'CLEAR_SPELLBOOK' }),
-    setLoading: (loading) => dispatch({ type: 'SET_LOADING', payload: loading }),
-    setError: (error) => dispatch({ type: 'SET_ERROR', payload: error }),
-    loadState: (character, spells) =>
+  const setCharacter = useCallback(
+    (character: Partial<Character>) => dispatch({ type: 'SET_CHARACTER', payload: character }),
+    []
+  )
+  const addSpell = useCallback(
+    (spell: Spell) => dispatch({ type: 'ADD_SPELL', payload: spell }),
+    []
+  )
+  const removeSpell = useCallback(
+    (spellId: string) => dispatch({ type: 'REMOVE_SPELL', payload: spellId }),
+    []
+  )
+  const setSelectedSpells = useCallback(
+    (spells: Spell[]) => dispatch({ type: 'SET_SELECTED_SPELLS', payload: spells }),
+    []
+  )
+  const setAvailableSpells = useCallback(
+    (spells: SpellListItem[]) => dispatch({ type: 'SET_AVAILABLE_SPELLS', payload: spells }),
+    []
+  )
+  const clearSpellbook = useCallback(() => dispatch({ type: 'CLEAR_SPELLBOOK' }), [])
+  const setLoading = useCallback(
+    (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading }),
+    []
+  )
+  const setError = useCallback(
+    (error: string | null) => dispatch({ type: 'SET_ERROR', payload: error }),
+    []
+  )
+  const loadState = useCallback(
+    (character: Character, spells: Spell[]) =>
       dispatch({ type: 'LOAD_STATE', payload: { character, spells } }),
-  }
+    []
+  )
+
+  const value = useMemo<SpellbookContextValue>(
+    () => ({
+      state,
+      setCharacter,
+      addSpell,
+      removeSpell,
+      setSelectedSpells,
+      setAvailableSpells,
+      clearSpellbook,
+      setLoading,
+      setError,
+      loadState,
+    }),
+    [
+      state,
+      setCharacter,
+      addSpell,
+      removeSpell,
+      setSelectedSpells,
+      setAvailableSpells,
+      clearSpellbook,
+      setLoading,
+      setError,
+      loadState,
+    ]
+  )
 
   return <SpellbookContext.Provider value={value}>{children}</SpellbookContext.Provider>
 }
