@@ -1,0 +1,47 @@
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #2d3748;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #718096;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+
+.main > * {
+  min-height: 500px;
+  max-height: calc(100vh - 250px);
+}

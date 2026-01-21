@@ -1,0 +1,67 @@
+.container {
+  background-color: #f7fafc;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fields {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field span {
+  font-size: 12px;
+  color: #718096;
+}
+
+.field select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.field select:disabled {
+  background-color: #edf2f7;
+  cursor: not-allowed;
+}
+
+.autoFillButton {
+  padding: 8px 16px;
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.autoFillButton:hover:not(:disabled) {
+  background-color: #2d3748;
+}
+
+.autoFillButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

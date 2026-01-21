@@ -1,0 +1,72 @@
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: #cbd5e0;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.name {
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.level {
+  font-size: 12px;
+  color: #718096;
+  background-color: #edf2f7;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.school {
+  font-size: 12px;
+  color: #718096;
+  font-style: italic;
+}
+
+.action {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add {
+  background-color: #48bb78;
+  color: white;
+}
+
+.add:hover:not(:disabled) {
+  background-color: #38a169;
+}
+
+.remove {
+  background-color: #fc8181;
+  color: white;
+}
+
+.remove:hover:not(:disabled) {
+  background-color: #f56565;
+}
