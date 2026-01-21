@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useSpellbook } from '../../context/SpellbookContext'
 import { SpellCard } from '../SpellCard/SpellCard'
-import { filterSpells, isSpellInList } from '../../utils/spellFilters'
+import { filterSpells } from '../../utils/spellFilters'
 import { sortByLevelThenAlpha } from '../../utils/spellSorters'
 import type { SpellLevel } from '../../types'
 import { SPELL_LEVEL_NAMES } from '../../types'
@@ -13,7 +13,7 @@ interface SpellBrowserProps {
 }
 
 export function SpellBrowser({ onAddSpell, loadingSpells }: SpellBrowserProps) {
-  const { state } = useSpellbook()
+  const { state, selectedSpellIds } = useSpellbook()
   const [search, setSearch] = useState('')
   const [levelFilter, setLevelFilter] = useState<SpellLevel | null>(null)
 
@@ -21,6 +21,11 @@ export function SpellBrowser({ onAddSpell, loadingSpells }: SpellBrowserProps) {
     const filtered = filterSpells(state.availableSpells, search, levelFilter)
     return sortByLevelThenAlpha(filtered)
   }, [state.availableSpells, search, levelFilter])
+
+  const handleAddSpell = useCallback(
+    (index: string) => onAddSpell(index),
+    [onAddSpell]
+  )
 
   return (
     <div className={styles.container}>
@@ -53,13 +58,13 @@ export function SpellBrowser({ onAddSpell, loadingSpells }: SpellBrowserProps) {
 
       <div className={styles.list}>
         {filteredSpells.map((spell) => {
-          const isAdded = isSpellInList(spell, state.selectedSpells)
+          const isAdded = selectedSpellIds.has(spell.index)
           const isLoading = loadingSpells.has(spell.index)
           return (
             <SpellCard
               key={spell.index}
               spell={spell}
-              onAction={() => onAddSpell(spell.index)}
+              onAction={() => handleAddSpell(spell.index)}
               actionLabel={isLoading ? '...' : isAdded ? 'Added' : 'Add'}
               actionVariant="add"
               disabled={isAdded || isLoading}

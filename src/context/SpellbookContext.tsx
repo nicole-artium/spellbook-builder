@@ -92,6 +92,7 @@ function spellbookReducer(state: SpellbookState, action: SpellbookAction): Spell
 
 interface SpellbookContextValue {
   state: SpellbookState
+  selectedSpellIds: Set<string>
   setCharacter: (character: Partial<Character>) => void
   addSpell: (spell: Spell) => void
   removeSpell: (spellId: string) => void
@@ -143,9 +144,15 @@ export function SpellbookProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const selectedSpellIds = useMemo(
+    () => new Set(state.selectedSpells.map((s) => s.id)),
+    [state.selectedSpells]
+  )
+
   const value = useMemo<SpellbookContextValue>(
     () => ({
       state,
+      selectedSpellIds,
       setCharacter,
       addSpell,
       removeSpell,
@@ -158,6 +165,7 @@ export function SpellbookProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      selectedSpellIds,
       setCharacter,
       addSpell,
       removeSpell,

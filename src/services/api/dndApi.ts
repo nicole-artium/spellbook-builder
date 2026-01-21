@@ -48,7 +48,7 @@ async function fetchJson<T>(url: string): Promise<T> {
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status} ${response.statusText}`)
   }
-  return response.json()
+  return response.json() as Promise<T>
 }
 
 async function fetchAllPages<T>(baseUrl: string): Promise<T[]> {
@@ -56,7 +56,7 @@ async function fetchAllPages<T>(baseUrl: string): Promise<T[]> {
   let url: string | null = baseUrl
 
   while (url) {
-    const response = await fetchJson<Open5ePaginatedResponse<T>>(url)
+    const response: Open5ePaginatedResponse<T> = await fetchJson<Open5ePaginatedResponse<T>>(url)
     results.push(...response.results)
     url = response.next
   }
@@ -107,10 +107,18 @@ export async function getAllSpells(): Promise<SpellListItem[]> {
   }))
 }
 
+const spellCache = new Map<string, Spell>()
+
 export async function getSpellDetails(spellKey: string): Promise<Spell> {
   const key = spellKey.startsWith(`${DOCUMENT_KEY}_`) ? spellKey : `${DOCUMENT_KEY}_${spellKey}`
+
+  const cached = spellCache.get(key)
+  if (cached) return cached
+
   const data = await fetchJson<Open5eSpellResponse>(`${BASE_URL}/spells/${key}/`)
-  return transformOpen5eSpell(data)
+  const spell = transformOpen5eSpell(data)
+  spellCache.set(key, spell)
+  return spell
 }
 
 export async function getSpellsByClass(classKey: string): Promise<SpellListItem[]> {

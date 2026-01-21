@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Spell, SpellListItem } from '../../types'
 import { SPELL_LEVEL_NAMES, type SpellLevel } from '../../types'
 import styles from './SpellCard.module.css'
@@ -10,7 +11,7 @@ interface SpellCardProps {
   disabled?: boolean
 }
 
-export function SpellCard({
+export const SpellCard = memo(function SpellCard({
   spell,
   onAction,
   actionLabel,
@@ -36,4 +37,4 @@ export function SpellCard({
       </button>
     </div>
   )
-}
+})
