@@ -18,7 +18,7 @@ import {
   importSpells,
 } from './services/storage/jsonExport'
 import { filterSpellsByMaxLevel } from './utils/spellFilters'
-import { MAX_SPELL_LEVEL_BY_CHARACTER_LEVEL, type SpellLevel } from './types'
+import { getMaxSpellLevel } from './types'
 import styles from './App.module.css'
 
 function AppContent() {
@@ -66,7 +66,7 @@ function AppContent() {
     setLoading(true)
     try {
       const classSpells = await getSpellsByClass(state.character.className)
-      const maxLevel = MAX_SPELL_LEVEL_BY_CHARACTER_LEVEL[state.character.level] as SpellLevel
+      const maxLevel = getMaxSpellLevel(state.character.className, state.character.level)
       const availableClassSpells = filterSpellsByMaxLevel(classSpells, maxLevel)
       const spellIndices = availableClassSpells.map((s) => s.index)
       const fullSpells = await getMultipleSpellDetails(spellIndices)
