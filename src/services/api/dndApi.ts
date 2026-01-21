@@ -1,58 +1,46 @@
 import type { Spell, SpellListItem, ClassInfo, SubclassInfo } from '../../types'
 
-const BASE_URL = 'https://www.dnd5eapi.co/api'
+const BASE_URL = 'https://api.open5e.com/v2'
+const DOCUMENT_KEY = 'srd-2024'
+const PAGE_LIMIT = 400
 
-interface ApiSpellListResponse {
+interface Open5ePaginatedResponse<T> {
   count: number
-  results: Array<{
-    index: string
-    name: string
-    level: number
-    url: string
-  }>
+  next: string | null
+  previous: string | null
+  results: T[]
 }
 
-interface ApiSpellResponse {
-  index: string
+interface Open5eSpellListItem {
+  key: string
   name: string
   level: number
-  school: { name: string }
+  url: string
+}
+
+interface Open5eSpellResponse {
+  key: string
+  name: string
+  level: number
+  school: { name: string; key: string }
   casting_time: string
   range: string
   duration: string
-  components: string[]
-  material?: string
-  desc: string[]
-  higher_level?: string[]
+  verbal: boolean
+  somatic: boolean
+  material: boolean
+  material_specified: string | null
+  desc: string
+  higher_level: string | null
   ritual: boolean
   concentration: boolean
 }
 
-interface ApiClassListResponse {
-  count: number
-  results: Array<{
-    index: string
-    name: string
-    url: string
-  }>
-}
-
-interface ApiSubclassListResponse {
-  subclasses: Array<{
-    index: string
-    name: string
-    url: string
-  }>
-}
-
-interface ApiClassSpellsResponse {
-  count: number
-  results: Array<{
-    index: string
-    name: string
-    level: number
-    url: string
-  }>
+interface Open5eClassResponse {
+  key: string
+  name: string
+  url: string
+  subclass_of: { key: string; name: string; url: string } | null
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -63,25 +51,75 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json()
 }
 
+async function fetchAllPages<T>(baseUrl: string): Promise<T[]> {
+  const results: T[] = []
+  let url: string | null = baseUrl
+
+  while (url) {
+    const response = await fetchJson<Open5ePaginatedResponse<T>>(url)
+    results.push(...response.results)
+    url = response.next
+  }
+
+  return results
+}
+
+function formatCastingTime(time: string): string {
+  const map: Record<string, string> = {
+    action: '1 action',
+    bonus_action: '1 bonus action',
+    reaction: '1 reaction',
+  }
+  return map[time] ?? time
+}
+
+function transformOpen5eSpell(apiSpell: Open5eSpellResponse): Spell {
+  return {
+    id: apiSpell.key,
+    name: apiSpell.name,
+    level: apiSpell.level,
+    school: apiSpell.school.name,
+    castingTime: formatCastingTime(apiSpell.casting_time),
+    range: apiSpell.range,
+    duration: apiSpell.duration,
+    components: {
+      verbal: apiSpell.verbal,
+      somatic: apiSpell.somatic,
+      material: apiSpell.material,
+      materialDescription: apiSpell.material_specified ?? undefined,
+    },
+    description: apiSpell.desc,
+    higherLevels: apiSpell.higher_level ?? undefined,
+    ritual: apiSpell.ritual,
+    concentration: apiSpell.concentration,
+  }
+}
+
 export async function getAllSpells(): Promise<SpellListItem[]> {
-  const data = await fetchJson<ApiSpellListResponse>(`${BASE_URL}/spells`)
-  return data.results.map((spell) => ({
-    index: spell.index,
+  const url = `${BASE_URL}/spells/?document__key=${DOCUMENT_KEY}&limit=${PAGE_LIMIT}`
+  const spells = await fetchAllPages<Open5eSpellListItem>(url)
+
+  return spells.map((spell) => ({
+    index: spell.key,
     name: spell.name,
     level: spell.level,
     url: spell.url,
   }))
 }
 
-export async function getSpellDetails(spellIndex: string): Promise<Spell> {
-  const data = await fetchJson<ApiSpellResponse>(`${BASE_URL}/spells/${spellIndex}`)
-  return transformApiSpell(data)
+export async function getSpellDetails(spellKey: string): Promise<Spell> {
+  const key = spellKey.startsWith(`${DOCUMENT_KEY}_`) ? spellKey : `${DOCUMENT_KEY}_${spellKey}`
+  const data = await fetchJson<Open5eSpellResponse>(`${BASE_URL}/spells/${key}/`)
+  return transformOpen5eSpell(data)
 }
 
-export async function getSpellsByClass(classIndex: string): Promise<SpellListItem[]> {
-  const data = await fetchJson<ApiClassSpellsResponse>(`${BASE_URL}/classes/${classIndex}/spells`)
-  return data.results.map((spell) => ({
-    index: spell.index,
+export async function getSpellsByClass(classKey: string): Promise<SpellListItem[]> {
+  const fullClassKey = classKey.startsWith(`${DOCUMENT_KEY}_`) ? classKey : `${DOCUMENT_KEY}_${classKey}`
+  const url = `${BASE_URL}/spells/?document__key=${DOCUMENT_KEY}&classes__key=${fullClassKey}&limit=${PAGE_LIMIT}`
+  const spells = await fetchAllPages<Open5eSpellListItem>(url)
+
+  return spells.map((spell) => ({
+    index: spell.key,
     name: spell.name,
     level: spell.level,
     url: spell.url,
@@ -89,50 +127,33 @@ export async function getSpellsByClass(classIndex: string): Promise<SpellListIte
 }
 
 export async function getAllClasses(): Promise<ClassInfo[]> {
-  const data = await fetchJson<ApiClassListResponse>(`${BASE_URL}/classes`)
-  return data.results.map((cls) => ({
-    index: cls.index,
-    name: cls.name,
-    url: cls.url,
-  }))
+  const url = `${BASE_URL}/classes/?document__key=${DOCUMENT_KEY}`
+  const allClasses = await fetchAllPages<Open5eClassResponse>(url)
+
+  return allClasses
+    .filter((cls) => cls.subclass_of === null)
+    .map((cls) => ({
+      index: cls.key,
+      name: cls.name,
+      url: cls.url,
+    }))
 }
 
-export async function getSubclassesByClass(classIndex: string): Promise<SubclassInfo[]> {
-  const data = await fetchJson<ApiSubclassListResponse>(`${BASE_URL}/classes/${classIndex}`)
-  return data.subclasses.map((sub) => ({
-    index: sub.index,
-    name: sub.name,
-    url: sub.url,
-  }))
+export async function getSubclassesByClass(classKey: string): Promise<SubclassInfo[]> {
+  const fullClassKey = classKey.startsWith(`${DOCUMENT_KEY}_`) ? classKey : `${DOCUMENT_KEY}_${classKey}`
+  const url = `${BASE_URL}/classes/?document__key=${DOCUMENT_KEY}`
+  const allClasses = await fetchAllPages<Open5eClassResponse>(url)
+
+  return allClasses
+    .filter((cls) => cls.subclass_of?.key === fullClassKey)
+    .map((sub) => ({
+      index: sub.key,
+      name: sub.name,
+      url: sub.url,
+    }))
 }
 
-export async function getMultipleSpellDetails(spellIndices: string[]): Promise<Spell[]> {
-  const promises = spellIndices.map((index) => getSpellDetails(index))
+export async function getMultipleSpellDetails(spellKeys: string[]): Promise<Spell[]> {
+  const promises = spellKeys.map((key) => getSpellDetails(key))
   return Promise.all(promises)
-}
-
-function transformApiSpell(apiSpell: ApiSpellResponse): Spell {
-  const hasVerbal = apiSpell.components.includes('V')
-  const hasSomatic = apiSpell.components.includes('S')
-  const hasMaterial = apiSpell.components.includes('M')
-
-  return {
-    id: apiSpell.index,
-    name: apiSpell.name,
-    level: apiSpell.level,
-    school: apiSpell.school.name,
-    castingTime: apiSpell.casting_time,
-    range: apiSpell.range,
-    duration: apiSpell.duration,
-    components: {
-      verbal: hasVerbal,
-      somatic: hasSomatic,
-      material: hasMaterial,
-      materialDescription: apiSpell.material,
-    },
-    description: apiSpell.desc.join('\n\n'),
-    higherLevels: apiSpell.higher_level?.join('\n\n'),
-    ritual: apiSpell.ritual,
-    concentration: apiSpell.concentration,
-  }
 }
