@@ -1,19 +1,14 @@
-import type { Character, Spell } from '../../types'
+import type { Character, Spell, UnifiedSpellbook } from '../../types'
 
-export function exportCharacter(character: Character): void {
-  const json = JSON.stringify(character, null, 2)
-  downloadJson(json, `character_${character.id}.json`)
+export function sanitizeFilename(name: string): string {
+  return name.replace(/[/\\:*?"<>|]/g, '_').trim() || 'spellbook'
 }
 
-export function exportSpells(spells: Spell[]): void {
-  const json = JSON.stringify(spells, null, 2)
-  const timestamp = new Date().toISOString().split('T')[0]
-  downloadJson(json, `spells_${timestamp}.json`)
-}
-
-export function exportSpellbook(character: Character, spells: Spell[]): void {
-  exportCharacter(character)
-  exportSpells(spells)
+export function exportUnifiedSpellbook(character: Character, spells: Spell[]): void {
+  const data: UnifiedSpellbook = { character, spells }
+  const json = JSON.stringify(data, null, 2)
+  const filename = `${sanitizeFilename(character.name)}_spellbook.json`
+  downloadJson(json, filename)
 }
 
 function downloadJson(content: string, filename: string): void {
@@ -28,21 +23,28 @@ function downloadJson(content: string, filename: string): void {
   URL.revokeObjectURL(url)
 }
 
-export async function importCharacter(file: File): Promise<Character> {
+export async function importUnifiedSpellbook(file: File): Promise<UnifiedSpellbook> {
   const text = await file.text()
   const data = JSON.parse(text)
-  validateCharacter(data)
-  return data as Character
+  validateUnifiedSpellbook(data)
+  return data as UnifiedSpellbook
 }
 
-export async function importSpells(file: File): Promise<Spell[]> {
-  const text = await file.text()
-  const data = JSON.parse(text)
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid spells file: expected an array')
+function validateUnifiedSpellbook(data: unknown): asserts data is UnifiedSpellbook {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid spellbook data')
   }
-  data.forEach(validateSpell)
-  return data as Spell[]
+  const spellbook = data as Record<string, unknown>
+
+  if (!spellbook.character || typeof spellbook.character !== 'object') {
+    throw new Error('Invalid format: missing character data')
+  }
+  if (!Array.isArray(spellbook.spells)) {
+    throw new Error('Invalid format: missing spells array')
+  }
+
+  validateCharacter(spellbook.character)
+  spellbook.spells.forEach(validateSpell)
 }
 
 function validateCharacter(data: unknown): asserts data is Character {
@@ -51,6 +53,7 @@ function validateCharacter(data: unknown): asserts data is Character {
   }
   const char = data as Record<string, unknown>
   if (typeof char.id !== 'string') throw new Error('Character missing id')
+  if (typeof char.name !== 'string') throw new Error('Character missing name')
   if (typeof char.className !== 'string') throw new Error('Character missing className')
   if (typeof char.level !== 'number') throw new Error('Character missing level')
 }

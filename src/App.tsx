@@ -14,9 +14,8 @@ import {
 } from './services/api/dndApi'
 import { pdfAdapter } from './services/pdf/JsPdfAdapter'
 import {
-  exportSpellbook,
-  importCharacter,
-  importSpells,
+  exportUnifiedSpellbook,
+  importUnifiedSpellbook,
 } from './services/storage/jsonExport'
 import { filterSpellsByMaxLevel } from './utils/spellFilters'
 import { getMaxSpellLevel } from './types'
@@ -27,8 +26,8 @@ function AppContent() {
     useSpellbook()
   const [loadingSpells, setLoadingSpells] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null)
-  const characterFileRef = useRef<HTMLInputElement>(null)
-  const spellsFileRef = useRef<HTMLInputElement>(null)
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
+  const importFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -108,47 +107,42 @@ function AppContent() {
   }, [state.selectedSpells, state.character])
 
   const handleExport = useCallback(() => {
-    if (state.selectedSpells.length === 0) {
-      setToast({ message: 'No spells to export', type: 'error' })
+    if (!state.character.name.trim()) {
+      setToast({ message: 'Enter a character name to export', type: 'error' })
       return
     }
-    exportSpellbook(state.character, state.selectedSpells)
-    setToast({ message: 'Exported character and spells', type: 'success' })
+    if (state.selectedSpells.length === 0) {
+      setToast({ message: 'Add at least one spell to export', type: 'error' })
+      return
+    }
+    exportUnifiedSpellbook(state.character, state.selectedSpells)
+    setToast({ message: 'Spellbook exported', type: 'success' })
   }, [state.character, state.selectedSpells])
 
-  const handleImportCharacter = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
-      try {
-        const character = await importCharacter(file)
-        loadState(character, state.selectedSpells)
-        setToast({ message: 'Character imported', type: 'success' })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to import character'
-        setToast({ message, type: 'error' })
-      }
-      e.target.value = ''
-    },
-    [loadState, state.selectedSpells]
-  )
+  const handleImportFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPendingImportFile(file)
+    }
+    e.target.value = ''
+  }, [])
 
-  const handleImportSpells = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
-      try {
-        const spells = await importSpells(file)
-        setSelectedSpells(spells)
-        setToast({ message: `Imported ${spells.length} spells`, type: 'success' })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to import spells'
-        setToast({ message, type: 'error' })
-      }
-      e.target.value = ''
-    },
-    [setSelectedSpells]
-  )
+  const handleImportConfirm = useCallback(async () => {
+    if (!pendingImportFile) return
+    try {
+      const { character, spells } = await importUnifiedSpellbook(pendingImportFile)
+      loadState(character, spells)
+      setToast({ message: `Imported ${character.name}'s spellbook`, type: 'success' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to import spellbook'
+      setToast({ message, type: 'error' })
+    }
+    setPendingImportFile(null)
+  }, [pendingImportFile, loadState])
+
+  const handleImportCancel = useCallback(() => {
+    setPendingImportFile(null)
+  }, [])
 
   return (
     <div className={styles.app}>
@@ -158,27 +152,17 @@ function AppContent() {
           <Button onClick={handleGeneratePdf} disabled={state.selectedSpells.length === 0}>
             Generate PDF
           </Button>
-          <Button variant="secondary" onClick={handleExport} disabled={state.selectedSpells.length === 0}>
-            Export
+          <Button variant="secondary" onClick={handleExport}>
+            Export Spellbook
           </Button>
-          <Button variant="secondary" onClick={() => characterFileRef.current?.click()}>
-            Import Character
-          </Button>
-          <Button variant="secondary" onClick={() => spellsFileRef.current?.click()}>
-            Import Spells
+          <Button variant="secondary" onClick={() => importFileRef.current?.click()}>
+            Import Spellbook
           </Button>
           <input
-            ref={characterFileRef}
+            ref={importFileRef}
             type="file"
             accept=".json"
-            onChange={handleImportCharacter}
-            style={{ display: 'none' }}
-          />
-          <input
-            ref={spellsFileRef}
-            type="file"
-            accept=".json"
-            onChange={handleImportSpells}
+            onChange={handleImportFileSelect}
             style={{ display: 'none' }}
           />
         </div>
@@ -192,6 +176,20 @@ function AppContent() {
         <SpellBrowser onAddSpell={handleAddSpell} loadingSpells={loadingSpells} />
         <SpellbookPanel />
       </main>
+
+      {pendingImportFile && (
+        <div className={styles.dialogOverlay}>
+          <div className={styles.dialog}>
+            <p>This will replace your current spellbook. Continue?</p>
+            <div className={styles.dialogActions}>
+              <Button variant="secondary" onClick={handleImportCancel}>
+                Cancel
+              </Button>
+              <Button onClick={handleImportConfirm}>Replace</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />

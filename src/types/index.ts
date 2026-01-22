@@ -29,9 +29,15 @@ export interface SpellListItem {
 
 export interface Character {
   id: string
+  name: string
   className: string
   subclass: string
   level: number
+}
+
+export interface UnifiedSpellbook {
+  character: Character
+  spells: Spell[]
 }
 
 export interface Spellbook {

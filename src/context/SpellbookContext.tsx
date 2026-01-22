@@ -24,6 +24,7 @@ type SpellbookAction =
 const initialState: SpellbookState = {
   character: {
     id: uuidv4(),
+    name: '',
     className: '',
     subclass: '',
     level: 1,

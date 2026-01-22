@@ -31,6 +31,10 @@ export function CharacterConfig({ onAutoFill }: CharacterConfigProps) {
     }
   }, [state.character.className])
 
+  const handleNameChange = (name: string) => {
+    setCharacter({ name })
+  }
+
   const handleClassChange = (className: string) => {
     setCharacter({ className, subclass: '' })
   }
@@ -51,6 +55,17 @@ export function CharacterConfig({ onAutoFill }: CharacterConfigProps) {
     <div className={styles.container}>
       <h3 className={styles.title}>Character</h3>
       <div className={styles.fields}>
+        <label className={styles.field}>
+          <span>Name</span>
+          <input
+            type="text"
+            value={state.character.name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Character name..."
+            className={!state.character.name.trim() ? styles.inputError : undefined}
+          />
+        </label>
+
         <label className={styles.field}>
           <span>Class</span>
           <select

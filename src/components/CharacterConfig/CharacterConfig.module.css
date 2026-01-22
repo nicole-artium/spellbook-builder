@@ -32,13 +32,22 @@
   color: #718096;
 }
 
-.field select {
+.field select,
+.field input[type="text"] {
   padding: 8px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   background-color: white;
   font-size: 14px;
   min-width: 150px;
+}
+
+.field input[type="text"]::placeholder {
+  color: #a0aec0;
+}
+
+.inputError {
+  border-color: #e53e3e !important;
 }
 
 .field select:disabled {
