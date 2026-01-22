@@ -9,6 +9,7 @@ import {
   getAllSpells,
   getSpellDetails,
   getSpellsByClass,
+  getSpellsBySubclass,
   getMultipleSpellDetails,
 } from './services/api/dndApi'
 import { pdfAdapter } from './services/pdf/JsPdfAdapter'
@@ -67,18 +68,30 @@ function AppContent() {
     try {
       const classSpells = await getSpellsByClass(state.character.className)
       const maxLevel = getMaxSpellLevel(state.character.className, state.character.level)
-      const availableClassSpells = filterSpellsByMaxLevel(classSpells, maxLevel)
-      const spellIndices = availableClassSpells.map((s) => s.index)
+
+      // Combine class spells with subclass spells if a subclass is selected
+      let allAvailableSpells = [...classSpells]
+      if (state.character.subclass) {
+        const subclassSpells = await getSpellsBySubclass(state.character.className, state.character.subclass)
+        const existingIds = new Set(classSpells.map((s) => s.index))
+        const uniqueSubclassSpells = subclassSpells.filter((s) => !existingIds.has(s.index))
+        allAvailableSpells = [...classSpells, ...uniqueSubclassSpells]
+      }
+
+      const filteredSpells = filterSpellsByMaxLevel(allAvailableSpells, maxLevel)
+      const spellIndices = filteredSpells.map((s) => s.index)
       const fullSpells = await getMultipleSpellDetails(spellIndices)
       setSelectedSpells(fullSpells)
-      setToast({ message: `Added ${fullSpells.length} spells`, type: 'success' })
+
+      const subclassNote = state.character.subclass ? ' (including subclass spells)' : ''
+      setToast({ message: `Added ${fullSpells.length} spells${subclassNote}`, type: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to auto-fill spells'
       setToast({ message, type: 'error' })
     } finally {
       setLoading(false)
     }
-  }, [state.character.className, state.character.level, setSelectedSpells, setLoading])
+  }, [state.character.className, state.character.subclass, state.character.level, setSelectedSpells, setLoading])
 
   const handleGeneratePdf = useCallback(() => {
     if (state.selectedSpells.length === 0) {

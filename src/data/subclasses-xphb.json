@@ -1,0 +1,178 @@
+{
+  "bard": [
+    {
+      "name": "College of Dance",
+      "shortName": "Dance",
+      "className": "Bard"
+    },
+    {
+      "name": "College of Glamour",
+      "shortName": "Glamour",
+      "className": "Bard"
+    },
+    {
+      "name": "College of Lore",
+      "shortName": "Lore",
+      "className": "Bard"
+    },
+    {
+      "name": "College of Valor",
+      "shortName": "Valor",
+      "className": "Bard"
+    }
+  ],
+  "cleric": [
+    {
+      "name": "Life Domain",
+      "shortName": "Life",
+      "className": "Cleric"
+    },
+    {
+      "name": "Light Domain",
+      "shortName": "Light",
+      "className": "Cleric"
+    },
+    {
+      "name": "Trickery Domain",
+      "shortName": "Trickery",
+      "className": "Cleric"
+    },
+    {
+      "name": "War Domain",
+      "shortName": "War",
+      "className": "Cleric"
+    }
+  ],
+  "druid": [
+    {
+      "name": "Circle of the Land",
+      "shortName": "Land",
+      "className": "Druid"
+    },
+    {
+      "name": "Circle of the Moon",
+      "shortName": "Moon",
+      "className": "Druid"
+    },
+    {
+      "name": "Circle of the Sea",
+      "shortName": "Sea",
+      "className": "Druid"
+    },
+    {
+      "name": "Circle of the Stars",
+      "shortName": "Stars",
+      "className": "Druid"
+    }
+  ],
+  "paladin": [
+    {
+      "name": "Oath of Devotion",
+      "shortName": "Devotion",
+      "className": "Paladin"
+    },
+    {
+      "name": "Oath of Glory",
+      "shortName": "Glory",
+      "className": "Paladin"
+    },
+    {
+      "name": "Oath of the Ancients",
+      "shortName": "Ancients",
+      "className": "Paladin"
+    },
+    {
+      "name": "Oath of Vengeance",
+      "shortName": "Vengeance",
+      "className": "Paladin"
+    }
+  ],
+  "ranger": [
+    {
+      "name": "Beast Master",
+      "shortName": "Beast Master",
+      "className": "Ranger"
+    },
+    {
+      "name": "Fey Wanderer",
+      "shortName": "Fey Wanderer",
+      "className": "Ranger"
+    },
+    {
+      "name": "Gloom Stalker",
+      "shortName": "Gloom Stalker",
+      "className": "Ranger"
+    },
+    {
+      "name": "Hunter",
+      "shortName": "Hunter",
+      "className": "Ranger"
+    }
+  ],
+  "sorcerer": [
+    {
+      "name": "Aberrant Sorcery",
+      "shortName": "Aberrant",
+      "className": "Sorcerer"
+    },
+    {
+      "name": "Clockwork Sorcery",
+      "shortName": "Clockwork",
+      "className": "Sorcerer"
+    },
+    {
+      "name": "Draconic Sorcery",
+      "shortName": "Draconic",
+      "className": "Sorcerer"
+    },
+    {
+      "name": "Wild Magic Sorcery",
+      "shortName": "Wild Magic",
+      "className": "Sorcerer"
+    }
+  ],
+  "warlock": [
+    {
+      "name": "Archfey Patron",
+      "shortName": "Archfey",
+      "className": "Warlock"
+    },
+    {
+      "name": "Celestial Patron",
+      "shortName": "Celestial",
+      "className": "Warlock"
+    },
+    {
+      "name": "Fiend Patron",
+      "shortName": "Fiend",
+      "className": "Warlock"
+    },
+    {
+      "name": "Great Old One Patron",
+      "shortName": "Great Old One",
+      "className": "Warlock"
+    }
+  ],
+  "wizard": [
+    {
+      "name": "Abjurer",
+      "shortName": "Abjurer",
+      "className": "Wizard"
+    },
+    {
+      "name": "Diviner",
+      "shortName": "Diviner",
+      "className": "Wizard"
+    },
+    {
+      "name": "Evoker",
+      "shortName": "Evoker",
+      "className": "Wizard"
+    },
+    {
+      "name": "Illusionist",
+      "shortName": "Illusionist",
+      "className": "Wizard"
+    }
+  ]
+}

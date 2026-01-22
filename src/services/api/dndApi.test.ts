@@ -1,220 +1,176 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { getAllSpells, getSpellDetails, getAllClasses, getSpellsByClass, getSubclassesByClass } from './dndApi'
+import { describe, it, expect } from 'vitest'
+import { getAllSpells, getSpellDetails, getAllClasses, getSpellsByClass, getSpellsBySubclass, getSubclassesByClass, getMultipleSpellDetails } from './dndApi'
 
-const mockSpellListResponse = {
-  count: 2,
-  next: null,
-  previous: null,
-  results: [
-    { key: 'srd-2024_fireball', name: 'Fireball', level: 3, url: 'https://api.open5e.com/v2/spells/srd-2024_fireball/' },
-    { key: 'srd-2024_wish', name: 'Wish', level: 9, url: 'https://api.open5e.com/v2/spells/srd-2024_wish/' },
-  ],
-}
-
-const mockSpellDetailResponse = {
-  key: 'srd-2024_fireball',
-  name: 'Fireball',
-  level: 3,
-  school: { name: 'Evocation', key: 'evocation' },
-  casting_time: 'action',
-  range: '150 feet',
-  duration: 'Instantaneous',
-  verbal: true,
-  somatic: true,
-  material: true,
-  material_specified: 'A tiny ball of bat guano and sulfur',
-  desc: 'A bright streak flashes from your pointing finger.',
-  higher_level: 'When you cast this spell using a spell slot of 4th level or higher...',
-  ritual: false,
-  concentration: false,
-}
-
-const mockClassListResponse = {
-  count: 4,
-  next: null,
-  previous: null,
-  results: [
-    { key: 'srd-2024_wizard', name: 'Wizard', url: 'https://api.open5e.com/v2/classes/srd-2024_wizard/', subclass_of: null },
-    { key: 'srd-2024_cleric', name: 'Cleric', url: 'https://api.open5e.com/v2/classes/srd-2024_cleric/', subclass_of: null },
-    { key: 'srd-2024_evoker', name: 'Evoker', url: 'https://api.open5e.com/v2/classes/srd-2024_evoker/', subclass_of: { key: 'srd-2024_wizard', name: 'Wizard', url: 'https://api.open5e.com/v2/classes/srd-2024_wizard/' } },
-    { key: 'srd-2024_life-domain', name: 'Life Domain', url: 'https://api.open5e.com/v2/classes/srd-2024_life-domain/', subclass_of: { key: 'srd-2024_cleric', name: 'Cleric', url: 'https://api.open5e.com/v2/classes/srd-2024_cleric/' } },
-  ],
-}
-
-describe('dndApi', () => {
-  beforeEach(() => {
-    vi.spyOn(global, 'fetch')
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
+describe('Static Spell Provider', () => {
   describe('getAllSpells', () => {
-    it('fetches and transforms spell list', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockSpellListResponse),
-      } as Response)
-
+    it('returns all 391 spells from the 2024 PHB', async () => {
       const result = await getAllSpells()
 
-      expect(fetch).toHaveBeenCalledWith('https://api.open5e.com/v2/spells/?document__key=srd-2024&limit=400')
-      expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({
-        index: 'srd-2024_fireball',
+      expect(result.length).toBe(391)
+    })
+
+    it('returns spells with correct structure', async () => {
+      const result = await getAllSpells()
+      const fireball = result.find((s) => s.name === 'Fireball')
+
+      expect(fireball).toBeDefined()
+      expect(fireball).toEqual({
+        index: 'fireball',
         name: 'Fireball',
         level: 3,
-        url: 'https://api.open5e.com/v2/spells/srd-2024_fireball/',
+        url: '',
       })
     })
 
-    it('handles pagination', async () => {
-      const page1 = {
-        count: 3,
-        next: 'https://api.open5e.com/v2/spells/?document__key=srd-2024&page=2',
-        previous: null,
-        results: [{ key: 'srd-2024_fireball', name: 'Fireball', level: 3, url: '' }],
-      }
-      const page2 = {
-        count: 3,
-        next: null,
-        previous: 'https://api.open5e.com/v2/spells/?document__key=srd-2024',
-        results: [
-          { key: 'srd-2024_wish', name: 'Wish', level: 9, url: '' },
-          { key: 'srd-2024_aid', name: 'Aid', level: 2, url: '' },
-        ],
-      }
-
-      vi.mocked(fetch)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(page1) } as Response)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(page2) } as Response)
-
+    it('includes previously missing spells like Blinding Smite', async () => {
       const result = await getAllSpells()
 
-      expect(fetch).toHaveBeenCalledTimes(2)
-      expect(result).toHaveLength(3)
-    })
-
-    it('throws on API error', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      } as Response)
-
-      await expect(getAllSpells()).rejects.toThrow('API request failed')
+      expect(result.find((s) => s.name === 'Blinding Smite')).toBeDefined()
+      expect(result.find((s) => s.name === 'Aura of Vitality')).toBeDefined()
     })
   })
 
   describe('getSpellDetails', () => {
-    it('fetches and transforms spell details', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockSpellDetailResponse),
-      } as Response)
+    it('returns full spell details for Fireball', async () => {
+      const result = await getSpellDetails('fireball')
 
-      const result = await getSpellDetails('srd-2024_fireball')
-
-      expect(fetch).toHaveBeenCalledWith('https://api.open5e.com/v2/spells/srd-2024_fireball/')
-      expect(result.id).toBe('srd-2024_fireball')
+      expect(result.id).toBe('fireball')
       expect(result.name).toBe('Fireball')
+      expect(result.level).toBe(3)
       expect(result.school).toBe('Evocation')
       expect(result.castingTime).toBe('1 action')
+      expect(result.range).toBe('150 feet')
       expect(result.components.verbal).toBe(true)
       expect(result.components.somatic).toBe(true)
       expect(result.components.material).toBe(true)
-      expect(result.components.materialDescription).toBe('A tiny ball of bat guano and sulfur')
+      expect(result.ritual).toBe(false)
+      expect(result.concentration).toBe(false)
     })
 
-    it('handles legacy spell keys without prefix', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockSpellDetailResponse),
-      } as Response)
+    it('returns full spell details for Blinding Smite', async () => {
+      const result = await getSpellDetails('blinding-smite')
 
-      await getSpellDetails('fireball')
-
-      expect(fetch).toHaveBeenCalledWith('https://api.open5e.com/v2/spells/srd-2024_fireball/')
-    })
-
-    it('transforms casting time formats', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ ...mockSpellDetailResponse, casting_time: 'bonus_action' }),
-      } as Response)
-
-      const result = await getSpellDetails('test')
-
+      expect(result.id).toBe('blinding-smite')
+      expect(result.name).toBe('Blinding Smite')
+      expect(result.level).toBe(3)
+      expect(result.school).toBe('Evocation')
       expect(result.castingTime).toBe('1 bonus action')
     })
 
-    it('handles spells without material components', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ ...mockSpellDetailResponse, material: false, material_specified: null }),
-      } as Response)
+    it('handles ritual spells correctly', async () => {
+      const result = await getSpellDetails('alarm')
 
-      const result = await getSpellDetails('test')
-
-      expect(result.components.material).toBe(false)
-      expect(result.components.materialDescription).toBeUndefined()
-    })
-  })
-
-  describe('getAllClasses', () => {
-    it('fetches and filters to base classes only', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockClassListResponse),
-      } as Response)
-
-      const result = await getAllClasses()
-
-      expect(result).toHaveLength(2)
-      expect(result.map((c) => c.name)).toEqual(['Wizard', 'Cleric'])
-    })
-  })
-
-  describe('getSubclassesByClass', () => {
-    it('returns subclasses for a given class', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockClassListResponse),
-      } as Response)
-
-      const result = await getSubclassesByClass('srd-2024_wizard')
-
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Evoker')
+      expect(result.ritual).toBe(true)
     })
 
-    it('handles class key without prefix', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockClassListResponse),
-      } as Response)
+    it('handles concentration spells correctly', async () => {
+      const result = await getSpellDetails('aura-of-vitality')
 
-      const result = await getSubclassesByClass('wizard')
+      expect(result.concentration).toBe(true)
+    })
 
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Evoker')
+    it('throws for non-existent spell', async () => {
+      await expect(getSpellDetails('not-a-real-spell')).rejects.toThrow('Spell not found')
     })
   })
 
   describe('getSpellsByClass', () => {
-    it('fetches spells for a specific class', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockSpellListResponse),
-      } as Response)
+    it('returns Paladin spells including Blinding Smite', async () => {
+      const result = await getSpellsByClass('paladin')
 
+      expect(result.length).toBeGreaterThan(40)
+      expect(result.find((s) => s.name === 'Blinding Smite')).toBeDefined()
+      expect(result.find((s) => s.name === 'Aura of Vitality')).toBeDefined()
+    })
+
+    it('returns Wizard spells', async () => {
       const result = await getSpellsByClass('wizard')
 
-      expect(fetch).toHaveBeenCalledWith(
-        'https://api.open5e.com/v2/spells/?document__key=srd-2024&classes__key=srd-2024_wizard&limit=400'
-      )
-      expect(result).toHaveLength(2)
+      expect(result.length).toBeGreaterThan(200)
+      expect(result.find((s) => s.name === 'Fireball')).toBeDefined()
+      expect(result.find((s) => s.name === 'Wish')).toBeDefined()
+    })
+
+    it('handles class key with prefix', async () => {
+      const result = await getSpellsByClass('srd-2024_paladin')
+
+      expect(result.find((s) => s.name === 'Blinding Smite')).toBeDefined()
+    })
+  })
+
+  describe('getSpellsBySubclass', () => {
+    it('returns Oath of Glory spells including Guiding Bolt', async () => {
+      const result = await getSpellsBySubclass('paladin', 'glory')
+
+      expect(result.length).toBe(10)
+      expect(result.find((s) => s.name === 'Guiding Bolt')).toBeDefined()
+      expect(result.find((s) => s.name === 'Heroism')).toBeDefined()
+      expect(result.find((s) => s.name === 'Haste')).toBeDefined()
+    })
+
+    it('returns Oath of Devotion spells including Shield of Faith', async () => {
+      const result = await getSpellsBySubclass('paladin', 'devotion')
+
+      expect(result.length).toBe(10)
+      expect(result.find((s) => s.name === 'Shield of Faith')).toBeDefined()
+      expect(result.find((s) => s.name === 'Zone of Truth')).toBeDefined()
+      expect(result.find((s) => s.name === 'Beacon of Hope')).toBeDefined()
+    })
+
+    it('returns Evoker spells', async () => {
+      const result = await getSpellsBySubclass('wizard', 'evoker')
+
+      expect(result.length).toBeGreaterThan(0)
+    })
+
+    it('returns empty array for non-existent subclass', async () => {
+      const result = await getSpellsBySubclass('paladin', 'nonexistent')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getAllClasses', () => {
+    it('returns all caster classes', async () => {
+      const result = await getAllClasses()
+
+      expect(result.length).toBe(8)
+      expect(result.map((c) => c.name)).toContain('Paladin')
+      expect(result.map((c) => c.name)).toContain('Wizard')
+      expect(result.map((c) => c.name)).toContain('Cleric')
+    })
+  })
+
+  describe('getSubclassesByClass', () => {
+    it('returns subclasses for Paladin', async () => {
+      const result = await getSubclassesByClass('paladin')
+
+      expect(result.length).toBe(4)
+      expect(result.map((s) => s.name)).toContain('Oath of Devotion')
+      expect(result.map((s) => s.name)).toContain('Oath of Vengeance')
+    })
+
+    it('returns subclasses for Wizard', async () => {
+      const result = await getSubclassesByClass('wizard')
+
+      expect(result.length).toBe(4)
+      expect(result.map((s) => s.name)).toContain('Evoker')
+      expect(result.map((s) => s.name)).toContain('Abjurer')
+    })
+
+    it('handles class key with prefix', async () => {
+      const result = await getSubclassesByClass('srd-2024_paladin')
+
+      expect(result.length).toBe(4)
+    })
+  })
+
+  describe('getMultipleSpellDetails', () => {
+    it('returns multiple spells at once', async () => {
+      const result = await getMultipleSpellDetails(['fireball', 'blinding-smite', 'alarm'])
+
+      expect(result.length).toBe(3)
+      expect(result.map((s) => s.name)).toEqual(['Fireball', 'Blinding Smite', 'Alarm'])
     })
   })
 })
