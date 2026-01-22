@@ -18,6 +18,13 @@ npm test          # Watch mode
 npm run test:run  # Single run
 ```
 
+### E2E Tests (Playwright)
+
+```bash
+npm run test:e2e     # Run headless
+npm run test:e2e:ui  # Run with Playwright UI
+```
+
 ## Build for Production
 
 ```bash
