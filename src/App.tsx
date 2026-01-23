@@ -5,6 +5,7 @@ import { SpellBrowser } from './components/SpellBrowser/SpellBrowser'
 import { SpellbookPanel } from './components/SpellbookPanel/SpellbookPanel'
 import { Toast } from './components/common/Toast'
 import { Button } from './components/common/Button'
+import { DropdownButton } from './components/common/DropdownButton'
 import {
   getAllSpells,
   getSpellDetails,
@@ -12,7 +13,7 @@ import {
   getSpellsBySubclass,
   getMultipleSpellDetails,
 } from './services/api/dndApi'
-import { pdfAdapter } from './services/pdf/JsPdfAdapter'
+import { BinderPdfAdapter, PAGE_FORMATS } from './services/pdf'
 import {
   exportUnifiedSpellbook,
   importUnifiedSpellbook,
@@ -92,19 +93,24 @@ function AppContent() {
     }
   }, [state.character.className, state.character.subclass, state.character.level, setSelectedSpells, setLoading])
 
-  const handleGeneratePdf = useCallback(() => {
-    if (state.selectedSpells.length === 0) {
-      setToast({ message: 'No spells to generate', type: 'error' })
-      return
-    }
-    try {
-      pdfAdapter.generateSpellbook(state.selectedSpells, state.character)
-      setToast({ message: 'PDF generated', type: 'success' })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate PDF'
-      setToast({ message, type: 'error' })
-    }
-  }, [state.selectedSpells, state.character])
+  const handleGeneratePdf = useCallback(
+    (formatId: string) => {
+      if (state.selectedSpells.length === 0) {
+        setToast({ message: 'No spells to generate', type: 'error' })
+        return
+      }
+      try {
+        const format = PAGE_FORMATS[formatId]
+        const adapter = new BinderPdfAdapter(format)
+        adapter.generateSpellbook(state.selectedSpells, state.character)
+        setToast({ message: 'PDF generated', type: 'success' })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to generate PDF'
+        setToast({ message, type: 'error' })
+      }
+    },
+    [state.selectedSpells, state.character]
+  )
 
   const handleExport = useCallback(() => {
     if (!state.character.name.trim()) {
@@ -149,9 +155,15 @@ function AppContent() {
       <header className={styles.header}>
         <h1>Spellbook Builder</h1>
         <div className={styles.actions}>
-          <Button onClick={handleGeneratePdf} disabled={state.selectedSpells.length === 0}>
-            Generate PDF
-          </Button>
+          <DropdownButton
+            label="Export PDF"
+            options={[
+              { id: 'a5', label: 'A5 Binder (148×210mm)' },
+              { id: 'letter', label: 'US Letter (8.5×11in)' },
+            ]}
+            onSelect={handleGeneratePdf}
+            disabled={state.selectedSpells.length === 0}
+          />
           <Button variant="secondary" onClick={handleExport}>
             Export Spellbook
           </Button>
