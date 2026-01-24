@@ -10,6 +10,7 @@ import {
   FONT_ITALIC,
   FONT_BOLD_ITALIC,
 } from './fonts/ebGaramond'
+import { parseTextSegments, type TextSegment } from './textParser'
 
 const FONT_SPELL_NAME = 8
 const FONT_LEVEL_SCHOOL = 8
@@ -325,7 +326,6 @@ export class BinderPdfAdapter implements PdfAdapter {
   }
 
   private renderDescription(doc: jsPDF, description: string, x: number, startY: number): number {
-    doc.setFont('EBGaramond', 'normal')
     doc.setFontSize(FONT_BODY)
 
     let y = startY
@@ -334,71 +334,76 @@ export class BinderPdfAdapter implements PdfAdapter {
     for (let i = 0; i < paragraphs.length; i++) {
       const isFirst = i === 0
       const paragraph = paragraphs[i].replace(/\n/g, ' ')
-      const lines = doc.splitTextToSize(paragraph, this.contentWidth)
+      const indent = !isFirst ? FIRST_INDENT : 0
 
-      for (let j = 0; j < lines.length; j++) {
-        const isFirstLineOfPara = j === 0
-        const lineX = !isFirst && isFirstLineOfPara ? x + FIRST_INDENT : x
+      y = this.renderRichParagraph(doc, paragraph, x, y, indent)
+    }
+
+    return y
+  }
+
+  private renderRichParagraph(
+    doc: jsPDF,
+    paragraph: string,
+    x: number,
+    startY: number,
+    indent: number
+  ): number {
+    const segments = parseTextSegments(paragraph)
+    const words = this.segmentsToWords(segments)
+
+    let y = startY
+    let lineX = x + indent
+
+    for (const word of words) {
+      this.setFontForSegment(doc, word)
+      const wordWidth = doc.getTextWidth(word.text)
+
+      if (lineX + wordWidth > this.format.width - this.format.margins.right) {
+        y += LINE_HEIGHT_BODY
+        lineX = x
 
         if (y > this.format.height - this.format.margins.bottom) {
           doc.addPage()
           y = this.format.margins.top
         }
+      }
 
-        doc.text(lines[j], lineX, y)
-        y += LINE_HEIGHT_BODY
+      doc.text(word.text, lineX, y)
+      lineX += wordWidth
+    }
+
+    return y + LINE_HEIGHT_BODY
+  }
+
+  private segmentsToWords(segments: TextSegment[]): TextSegment[] {
+    const words: TextSegment[] = []
+
+    for (const segment of segments) {
+      const parts = segment.text.split(/( +)/)
+      for (const part of parts) {
+        if (part) {
+          words.push({ ...segment, text: part })
+        }
       }
     }
 
-    return y
+    return words
+  }
+
+  private setFontForSegment(doc: jsPDF, segment: TextSegment): void {
+    if (segment.boldItalic) {
+      doc.setFont('EBGaramond', 'bolditalic')
+    } else if (segment.bold) {
+      doc.setFont('EBGaramond', 'bold')
+    } else {
+      doc.setFont('EBGaramond', 'normal')
+    }
   }
 
   private renderHigherLevels(doc: jsPDF, higherLevels: string, x: number, y: number): number {
-    doc.setFont('EBGaramond', 'bolditalic')
     doc.setFontSize(FONT_BODY)
-    const { label, content } = this.parseHigherLevelLabel(higherLevels)
-    const labelX = x + FIRST_INDENT
-
-    if (y > this.format.height - this.format.margins.bottom) {
-      doc.addPage()
-      y = this.format.margins.top
-    }
-
-    doc.text(label, labelX, y)
-    const labelWidth = doc.getTextWidth(label)
-
-    doc.setFont('EBGaramond', 'normal')
-    const remainingWidth = this.contentWidth - FIRST_INDENT - labelWidth - 2
-    const textLines = doc.splitTextToSize(content, remainingWidth)
-
-    if (textLines.length > 0) {
-      doc.text(textLines[0], labelX + labelWidth + 1, y)
-      y += LINE_HEIGHT_BODY
-    }
-
-    const fullLines = doc.splitTextToSize(
-      textLines.slice(1).join(' '),
-      this.contentWidth
-    )
-
-    for (const line of fullLines) {
-      if (y > this.format.height - this.format.margins.bottom) {
-        doc.addPage()
-        y = this.format.margins.top
-      }
-      doc.text(line, x, y)
-      y += LINE_HEIGHT_BODY
-    }
-
-    return y
-  }
-
-  private parseHigherLevelLabel(text: string): { label: string; content: string } {
-    const match = text.match(/^\*\*(.+?)\*\*\s*(.*)$/s)
-    if (match) {
-      return { label: match[1], content: match[2] }
-    }
-    return { label: 'At Higher Levels.', content: text }
+    return this.renderRichParagraph(doc, higherLevels, x, y, FIRST_INDENT)
   }
 
   private estimateSpellHeight(doc: jsPDF, spell: Spell): number {

@@ -3,6 +3,7 @@ import type { Spell, Character } from '../../types'
 import type { PdfAdapter } from './PdfAdapter'
 import { sortByLevelThenAlpha } from '../../utils/spellSorters'
 import { SPELL_LEVEL_NAMES, type SpellLevel } from '../../types'
+import { parseTextSegments, type TextSegment } from './textParser'
 
 const PAGE_WIDTH = 210
 const PAGE_HEIGHT = 297
@@ -104,9 +105,7 @@ export class JsPdfAdapter implements PdfAdapter {
 
     if (spell.higherLevels) {
       y += LINE_HEIGHT / 2
-      const { label, content } = this.parseHigherLevelLabel(spell.higherLevels)
-      const higherText = `${label} ${content}`
-      y = this.renderWrappedText(doc, higherText, MARGIN + INDENT, y, CONTENT_WIDTH - INDENT)
+      y = this.renderWrappedText(doc, spell.higherLevels, MARGIN + INDENT, y, CONTENT_WIDTH - INDENT)
     }
 
     return y
@@ -124,16 +123,7 @@ export class JsPdfAdapter implements PdfAdapter {
 
     for (let i = 0; i < paragraphs.length; i++) {
       const paragraph = paragraphs[i].replace(/\n/g, ' ')
-      const lines = doc.splitTextToSize(paragraph, maxWidth)
-
-      for (const line of lines) {
-        if (y > PAGE_HEIGHT - MARGIN) {
-          doc.addPage()
-          y = MARGIN
-        }
-        doc.text(line, x, y)
-        y += LINE_HEIGHT
-      }
+      y = this.renderRichParagraph(doc, paragraph, x, y, maxWidth)
 
       if (i < paragraphs.length - 1) {
         y += LINE_HEIGHT / 2
@@ -143,12 +133,63 @@ export class JsPdfAdapter implements PdfAdapter {
     return y
   }
 
-  private parseHigherLevelLabel(text: string): { label: string; content: string } {
-    const match = text.match(/^\*\*(.+?)\*\*\s*(.*)$/s)
-    if (match) {
-      return { label: match[1], content: match[2] }
+  private renderRichParagraph(
+    doc: jsPDF,
+    paragraph: string,
+    x: number,
+    startY: number,
+    maxWidth: number
+  ): number {
+    const segments = parseTextSegments(paragraph)
+    const words = this.segmentsToWords(segments)
+
+    let y = startY
+    let lineX = x
+
+    for (const word of words) {
+      this.setFontForSegment(doc, word)
+      const wordWidth = doc.getTextWidth(word.text)
+
+      if (lineX + wordWidth > x + maxWidth) {
+        y += LINE_HEIGHT
+        lineX = x
+
+        if (y > PAGE_HEIGHT - MARGIN) {
+          doc.addPage()
+          y = MARGIN
+        }
+      }
+
+      doc.text(word.text, lineX, y)
+      lineX += wordWidth
     }
-    return { label: 'At Higher Levels:', content: text }
+
+    return y + LINE_HEIGHT
+  }
+
+  private segmentsToWords(segments: TextSegment[]): TextSegment[] {
+    const words: TextSegment[] = []
+
+    for (const segment of segments) {
+      const parts = segment.text.split(/( +)/)
+      for (const part of parts) {
+        if (part) {
+          words.push({ ...segment, text: part })
+        }
+      }
+    }
+
+    return words
+  }
+
+  private setFontForSegment(doc: jsPDF, segment: TextSegment): void {
+    if (segment.boldItalic) {
+      doc.setFont('helvetica', 'bolditalic')
+    } else if (segment.bold) {
+      doc.setFont('helvetica', 'bold')
+    } else {
+      doc.setFont('helvetica', 'normal')
+    }
   }
 
   private estimateSpellHeight(doc: jsPDF, spell: Spell): number {
