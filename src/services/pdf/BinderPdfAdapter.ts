@@ -11,52 +11,108 @@ import {
   FONT_BOLD_ITALIC,
 } from './fonts/ebGaramond'
 
-const FONT_SPELL_NAME = 9
+const FONT_SPELL_NAME = 8
 const FONT_LEVEL_SCHOOL = 8
-const FONT_METADATA = 8
+const FONT_METADATA = 7
 const FONT_MATERIAL = 7
 const FONT_BODY = 7
 
 const LINE_HEIGHT_BODY = 3.0
 const LINE_HEIGHT_META = 4.5
-const SPELL_SPACING = 3.0
+const SPELL_SPACING = 2.0
 const GAP_NAME_TO_META = 2.5
 const GAP_AFTER_META = 2.5
 const SECTION_HEADER_HEIGHT = 8
 const ICON_SIZE = 1.8
 const FIRST_INDENT = 3
 
-const COL_WIDTH_RATIOS = {
-  castingTime: 0.20,
-  range: 0.18,
-  duration: 0.28,
-  components: 0.34,
+const COL_MIN_RATIOS = {
+  castingTime: 0.15,
+  range: 0.12,
+  duration: 0.20,
+  components: 0.25,
+}
+
+const COL_PADDING = 3
+
+type ColWidths = {
+  castingTime: number
+  range: number
+  duration: number
+  components: number
 }
 
 export class BinderPdfAdapter implements PdfAdapter {
   private format: PageFormat
   private contentWidth: number
-  private colWidths: {
-    castingTime: number
-    range: number
-    duration: number
-    components: number
-  }
+  private colWidths!: ColWidths
 
   constructor(format: PageFormat) {
     this.format = format
     this.contentWidth = format.width - format.margins.left - format.margins.right
-    this.colWidths = {
-      castingTime: this.contentWidth * COL_WIDTH_RATIOS.castingTime,
-      range: this.contentWidth * COL_WIDTH_RATIOS.range,
-      duration: this.contentWidth * COL_WIDTH_RATIOS.duration,
-      components: this.contentWidth * COL_WIDTH_RATIOS.components,
+  }
+
+  private calculateOptimalColumnWidths(doc: jsPDF, spells: Spell[]): ColWidths {
+    doc.setFont('EBGaramond', 'normal')
+    doc.setFontSize(FONT_METADATA)
+
+    let maxCasting = 0
+    let maxRange = 0
+    let maxDuration = 0
+    let maxComponents = 0
+
+    for (const spell of spells) {
+      let castingWidth = doc.getTextWidth(spell.castingTime) + COL_PADDING
+      if (spell.ritual) castingWidth += ICON_SIZE + 1
+
+      const rangeWidth = doc.getTextWidth(spell.range) + COL_PADDING
+
+      let durationWidth = doc.getTextWidth(spell.duration) + COL_PADDING
+      if (spell.concentration) durationWidth += ICON_SIZE + 1
+
+      const componentsWidth = doc.getTextWidth(this.formatComponents(spell)) + COL_PADDING
+
+      maxCasting = Math.max(maxCasting, castingWidth)
+      maxRange = Math.max(maxRange, rangeWidth)
+      maxDuration = Math.max(maxDuration, durationWidth)
+      maxComponents = Math.max(maxComponents, componentsWidth)
+    }
+
+    const minCasting = this.contentWidth * COL_MIN_RATIOS.castingTime
+    const minRange = this.contentWidth * COL_MIN_RATIOS.range
+    const minDuration = this.contentWidth * COL_MIN_RATIOS.duration
+    const minComponents = this.contentWidth * COL_MIN_RATIOS.components
+
+    maxCasting = Math.max(maxCasting, minCasting)
+    maxRange = Math.max(maxRange, minRange)
+    maxDuration = Math.max(maxDuration, minDuration)
+    maxComponents = Math.max(maxComponents, minComponents)
+
+    const totalNeeded = maxCasting + maxRange + maxDuration + maxComponents
+    const remaining = this.contentWidth - totalNeeded
+
+    if (remaining > 0) {
+      const ratio = this.contentWidth / totalNeeded
+      return {
+        castingTime: maxCasting * ratio,
+        range: maxRange * ratio,
+        duration: maxDuration * ratio,
+        components: maxComponents * ratio,
+      }
+    }
+
+    return {
+      castingTime: maxCasting,
+      range: maxRange,
+      duration: maxDuration,
+      components: maxComponents,
     }
   }
 
   generateSpellbook(spells: Spell[], character: Character): void {
     const doc = this.createDocument()
     this.registerFonts(doc)
+    this.colWidths = this.calculateOptimalColumnWidths(doc, spells)
 
     const spellsByLevel = groupSpellsByLevel(spells)
     const levels = Array.from(spellsByLevel.keys()).sort((a, b) => a - b)
@@ -212,7 +268,9 @@ export class BinderPdfAdapter implements PdfAdapter {
     doc.setDrawColor(180, 180, 180)
     doc.setLineWidth(0.15)
 
-    doc.rect(x, y, this.contentWidth, rowHeight)
+    const rightEdge = x + this.contentWidth
+    doc.line(x, y, rightEdge, y)
+    doc.line(x, y + rowHeight, rightEdge, y + rowHeight)
 
     let dividerX = x + this.colWidths.castingTime
     doc.line(dividerX, y, dividerX, y + rowHeight)
