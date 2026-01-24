@@ -12,20 +12,20 @@ Manage issues, pull requests, and project boards using the GitHub CLI (`gh`).
 - User asks to create, update, or view issues
 - User wants to check PR status or create a PR
 - User references an issue number (e.g., "issue #9")
-- **When starting work on an issue** → interview user, create plan, then move to "In Progress"
+- **When starting work on an issue** → offer interview+plan, then move to "In Progress"
 - **After pushing code for an issue** → offer to move to "Done"
 - After completing work that should be tracked in an issue
 - When planning work that should be captured as issues
 
-## IMPORTANT: Working on Issues
+## Working on Issues
 
-When the user asks to "work on issue #X" or "start issue #X", **ALWAYS**:
+When the user asks to "work on issue #X" or "start issue #X":
 1. Read the issue details first
-2. Interview the user to clarify requirements
-3. Enter plan mode and get approval
-4. Only then begin implementation
+2. **Offer to interview and plan**: "Would you like me to interview you about requirements and create an implementation plan first?"
+3. If yes → conduct interview, then enter plan mode
+4. If no → proceed directly to implementation
 
-Never skip the interview and planning steps.
+For complex or ambiguous issues, recommend the interview+plan workflow.
 
 ## Common Commands
 
@@ -133,16 +133,16 @@ When creating issues, reference related items:
 
 ### Starting Work on an Issue
 
-When working on an issue, **ALWAYS follow this flow**:
-
 #### 1. Read the Issue
 ```bash
 gh issue view <ISSUE_NUMBER>
 ```
 
-#### 2. Interview the User
+#### 2. Offer Interview + Plan
 
-Before any implementation, conduct a brief interview to clarify requirements:
+Ask: "Would you like me to interview you about requirements and create an implementation plan first?"
+
+**If user accepts**, conduct a brief interview to clarify requirements:
 
 **Questions to ask** (use AskUserQuestion):
 - **Scope**: "What's the minimum viable solution for this issue?"
@@ -155,7 +155,7 @@ Adapt questions based on issue type:
 - **Feature**: "What's the core functionality vs nice-to-haves?"
 - **Refactor**: "What pain points should this address?"
 
-#### 3. Create an Implementation Plan
+#### 3. Create an Implementation Plan (if interview accepted)
 
 After the interview, **enter plan mode** to design the approach:
 
@@ -170,7 +170,7 @@ After the interview, **enter plan mode** to design the approach:
 
 #### 4. Move to "In Progress"
 
-Only after plan approval, move the issue:
+After plan approval (or if user skipped interview), move the issue:
 
 ```bash
 # Get item ID
