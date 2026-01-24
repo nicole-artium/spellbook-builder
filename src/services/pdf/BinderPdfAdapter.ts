@@ -356,7 +356,7 @@ export class BinderPdfAdapter implements PdfAdapter {
   private renderHigherLevels(doc: jsPDF, higherLevels: string, x: number, y: number): number {
     doc.setFont('EBGaramond', 'bolditalic')
     doc.setFontSize(FONT_BODY)
-    const label = 'At Higher Levels.'
+    const { label, content } = this.parseHigherLevelLabel(higherLevels)
     const labelX = x + FIRST_INDENT
 
     if (y > this.format.height - this.format.margins.bottom) {
@@ -369,7 +369,7 @@ export class BinderPdfAdapter implements PdfAdapter {
 
     doc.setFont('EBGaramond', 'normal')
     const remainingWidth = this.contentWidth - FIRST_INDENT - labelWidth - 2
-    const textLines = doc.splitTextToSize(higherLevels, remainingWidth)
+    const textLines = doc.splitTextToSize(content, remainingWidth)
 
     if (textLines.length > 0) {
       doc.text(textLines[0], labelX + labelWidth + 1, y)
@@ -391,6 +391,14 @@ export class BinderPdfAdapter implements PdfAdapter {
     }
 
     return y
+  }
+
+  private parseHigherLevelLabel(text: string): { label: string; content: string } {
+    const match = text.match(/^\*\*(.+?)\*\*\s*(.*)$/s)
+    if (match) {
+      return { label: match[1], content: match[2] }
+    }
+    return { label: 'At Higher Levels.', content: text }
   }
 
   private estimateSpellHeight(doc: jsPDF, spell: Spell): number {

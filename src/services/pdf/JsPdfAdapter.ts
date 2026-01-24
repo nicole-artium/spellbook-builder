@@ -104,7 +104,8 @@ export class JsPdfAdapter implements PdfAdapter {
 
     if (spell.higherLevels) {
       y += LINE_HEIGHT / 2
-      const higherText = `At Higher Levels: ${spell.higherLevels}`
+      const { label, content } = this.parseHigherLevelLabel(spell.higherLevels)
+      const higherText = `${label} ${content}`
       y = this.renderWrappedText(doc, higherText, MARGIN + INDENT, y, CONTENT_WIDTH - INDENT)
     }
 
@@ -140,6 +141,14 @@ export class JsPdfAdapter implements PdfAdapter {
     }
 
     return y
+  }
+
+  private parseHigherLevelLabel(text: string): { label: string; content: string } {
+    const match = text.match(/^\*\*(.+?)\*\*\s*(.*)$/s)
+    if (match) {
+      return { label: match[1], content: match[2] }
+    }
+    return { label: 'At Higher Levels:', content: text }
   }
 
   private estimateSpellHeight(doc: jsPDF, spell: Spell): number {
