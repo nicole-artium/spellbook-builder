@@ -167,6 +167,9 @@ After the interview, **enter plan mode** to design the approach:
    - Testing approach
    - Potential risks or edge cases
 4. Get user approval via `ExitPlanMode`
+5. **Save the plan** to `docs/specs/issue-{N}-plan.md` (e.g., `issue-16-plan.md`)
+
+**Note:** Plan files are temporary working documents. Remove them after the issue is closed or the work is merged.
 
 #### 4. Move to "In Progress"
 
