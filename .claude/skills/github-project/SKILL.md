@@ -12,10 +12,20 @@ Manage issues, pull requests, and project boards using the GitHub CLI (`gh`).
 - User asks to create, update, or view issues
 - User wants to check PR status or create a PR
 - User references an issue number (e.g., "issue #9")
-- **When starting work on an issue** → move to "In Progress"
+- **When starting work on an issue** → interview user, create plan, then move to "In Progress"
 - **After pushing code for an issue** → offer to move to "Done"
 - After completing work that should be tracked in an issue
 - When planning work that should be captured as issues
+
+## IMPORTANT: Working on Issues
+
+When the user asks to "work on issue #X" or "start issue #X", **ALWAYS**:
+1. Read the issue details first
+2. Interview the user to clarify requirements
+3. Enter plan mode and get approval
+4. Only then begin implementation
+
+Never skip the interview and planning steps.
 
 ## Common Commands
 
@@ -123,21 +133,60 @@ When creating issues, reference related items:
 
 ### Starting Work on an Issue
 
-When you begin working on an issue, **automatically move it to "In Progress"**:
+When working on an issue, **ALWAYS follow this flow**:
 
-1. Get the project item ID:
+#### 1. Read the Issue
 ```bash
-gh project item-list 2 --owner @me --format json | jq -r '.items[] | select(.content.number == <ISSUE_NUMBER>) | .id'
+gh issue view <ISSUE_NUMBER>
 ```
 
-2. Update status to "In Progress":
+#### 2. Interview the User
+
+Before any implementation, conduct a brief interview to clarify requirements:
+
+**Questions to ask** (use AskUserQuestion):
+- **Scope**: "What's the minimum viable solution for this issue?"
+- **Constraints**: "Are there any technical constraints or preferences?"
+- **Dependencies**: "Does this depend on or affect other issues?"
+- **Acceptance**: "How will we know this is done?"
+
+Adapt questions based on issue type:
+- **Bug**: "Can you reproduce it? What's the expected behavior?"
+- **Feature**: "What's the core functionality vs nice-to-haves?"
+- **Refactor**: "What pain points should this address?"
+
+#### 3. Create an Implementation Plan
+
+After the interview, **enter plan mode** to design the approach:
+
+1. Use `EnterPlanMode` to switch to planning
+2. Explore the relevant codebase areas
+3. Write a concrete implementation plan with:
+   - Files to modify/create
+   - Key changes in each file
+   - Testing approach
+   - Potential risks or edge cases
+4. Get user approval via `ExitPlanMode`
+
+#### 4. Move to "In Progress"
+
+Only after plan approval, move the issue:
+
 ```bash
+# Get item ID
+gh project item-list 2 --owner @me --format json | jq -r '.items[] | select(.content.number == <ISSUE_NUMBER>) | .id'
+
+# Update status
 gh project item-edit \
   --project-id PVT_kwHODx2xTM4BNJ9E \
   --id <ITEM_ID> \
   --field-id PVTSSF_lAHODx2xTM4BNJ9Ezg8O5KQ \
   --single-select-option-id 47fc9ee4
 ```
+
+#### 5. Implement Following the Plan
+
+Execute the approved plan, updating todos as you progress.
 
 ### After Pushing Code
 
