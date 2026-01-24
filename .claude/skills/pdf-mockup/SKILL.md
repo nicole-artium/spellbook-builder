@@ -67,12 +67,16 @@ writeFileSync('path/to/output.pdf', Buffer.from(doc.output('arraybuffer')))
 ### Output Location
 
 - During iteration: `docs/mockups/<name>.pdf`
-- Final mockups: Move to `docs/adr/` or `docs/specs/` and reference in documentation
-- Clean up intermediate mockups when done
+- Final approved mockups: Copy to `docs/design/`, overwriting the canonical version
+- ADRs and specs reference mockups via `../design/filename.pdf`
+- Clean up `docs/mockups/` working files when design is finalized
 
 ## After Generating
 
 1. Use the Read tool to display the PDF to the user
 2. Ask for feedback using AskUserQuestion
 3. Iterate or finalize based on response
-4. Clean up intermediate files when design is finalized
+4. When design is finalized:
+   - Copy final PDF to `docs/design/`
+   - Remove working PDFs from `docs/mockups/`
+   - Remove mockup generation scripts from `scripts/`

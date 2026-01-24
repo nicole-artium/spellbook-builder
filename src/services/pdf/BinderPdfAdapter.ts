@@ -15,22 +15,43 @@ const FONT_SPELL_NAME = 9
 const FONT_LEVEL_SCHOOL = 8
 const FONT_METADATA = 8
 const FONT_MATERIAL = 7
-const FONT_BODY = 8
+const FONT_BODY = 7
 
-const LINE_HEIGHT_BODY = 3.5
+const LINE_HEIGHT_BODY = 3.0
 const LINE_HEIGHT_META = 4.5
-const SPELL_SPACING = 5
+const SPELL_SPACING = 3.0
+const GAP_NAME_TO_META = 2.5
+const GAP_AFTER_META = 2.5
 const SECTION_HEADER_HEIGHT = 8
 const ICON_SIZE = 1.8
 const FIRST_INDENT = 3
 
+const COL_WIDTH_RATIOS = {
+  castingTime: 0.20,
+  range: 0.18,
+  duration: 0.28,
+  components: 0.34,
+}
+
 export class BinderPdfAdapter implements PdfAdapter {
   private format: PageFormat
   private contentWidth: number
+  private colWidths: {
+    castingTime: number
+    range: number
+    duration: number
+    components: number
+  }
 
   constructor(format: PageFormat) {
     this.format = format
     this.contentWidth = format.width - format.margins.left - format.margins.right
+    this.colWidths = {
+      castingTime: this.contentWidth * COL_WIDTH_RATIOS.castingTime,
+      range: this.contentWidth * COL_WIDTH_RATIOS.range,
+      duration: this.contentWidth * COL_WIDTH_RATIOS.duration,
+      components: this.contentWidth * COL_WIDTH_RATIOS.components,
+    }
   }
 
   generateSpellbook(spells: Spell[], character: Character): void {
@@ -113,12 +134,6 @@ export class BinderPdfAdapter implements PdfAdapter {
 
     y = this.renderSpellHeader(doc, spell, x, y)
     y = this.renderMetadataRow(doc, spell, x, y)
-
-    if (spell.components.material && spell.components.materialDescription) {
-      y = this.renderMaterialDescription(doc, spell.components.materialDescription, y)
-    }
-
-    y += 1
     y = this.renderDescription(doc, spell.description, x, y)
 
     if (spell.higherLevels) {
@@ -129,68 +144,126 @@ export class BinderPdfAdapter implements PdfAdapter {
   }
 
   private renderSpellHeader(doc: jsPDF, spell: Spell, x: number, y: number): number {
-    doc.setFont('EBGaramond', 'bold')
-    doc.setFontSize(FONT_SPELL_NAME)
-    const smallCapsName = this.toSmallCaps(spell.name)
-    doc.setCharSpace(0.5)
-    doc.text(smallCapsName, x, y)
-    doc.setCharSpace(0)
+    const nameEndX = this.renderSmallCapsName(doc, spell.name, x, y)
 
-    const nameWidth = doc.getTextWidth(smallCapsName)
     doc.setFont('EBGaramond', 'italic')
     doc.setFontSize(FONT_LEVEL_SCHOOL)
     const levelSchool = this.formatLevelSchool(spell)
-    doc.text(levelSchool, x + nameWidth + 2, y)
+    doc.text(levelSchool, nameEndX + 2, y)
 
-    return y + LINE_HEIGHT_META
+    return y + GAP_NAME_TO_META
+  }
+
+  private renderSmallCapsName(doc: jsPDF, name: string, startX: number, y: number): number {
+    doc.setFont('EBGaramond', 'bold')
+    const fullSize = FONT_SPELL_NAME
+    const smallSize = FONT_SPELL_NAME * 0.75
+
+    let x = startX
+    const words = name.toUpperCase().split(' ')
+
+    for (let w = 0; w < words.length; w++) {
+      if (w > 0) {
+        doc.setFontSize(fullSize)
+        doc.text(' ', x, y)
+        x += doc.getTextWidth(' ')
+      }
+
+      const word = words[w]
+      for (let i = 0; i < word.length; i++) {
+        const char = word[i]
+        const size = i === 0 ? fullSize : smallSize
+        doc.setFontSize(size)
+        doc.text(char, x, y)
+        x += doc.getTextWidth(char)
+      }
+    }
+
+    return x
   }
 
   private renderMetadataRow(doc: jsPDF, spell: Spell, x: number, y: number): number {
+    const materialLines = this.getMaterialLines(doc, spell)
+    const rowHeight = this.calculateMetadataRowHeight(materialLines.length)
+    const textY = y + LINE_HEIGHT_META - 1
+
+    this.renderMetadataBorders(doc, x, y, rowHeight)
+    this.renderMetadataCells(doc, spell, x, textY, materialLines)
+
+    return y + rowHeight + GAP_AFTER_META
+  }
+
+  private getMaterialLines(doc: jsPDF, spell: Spell): string[] {
+    if (!spell.components.material || !spell.components.materialDescription) {
+      return []
+    }
+    doc.setFontSize(FONT_MATERIAL)
+    const materialText = `(${spell.components.materialDescription})`
+    return doc.splitTextToSize(materialText, this.colWidths.components - 2)
+  }
+
+  private calculateMetadataRowHeight(materialLineCount: number): number {
+    const baseHeight = LINE_HEIGHT_META + 1
+    if (materialLineCount === 0) return baseHeight
+    return baseHeight + materialLineCount * LINE_HEIGHT_BODY
+  }
+
+  private renderMetadataBorders(doc: jsPDF, x: number, y: number, rowHeight: number): void {
+    doc.setDrawColor(180, 180, 180)
+    doc.setLineWidth(0.15)
+
+    doc.rect(x, y, this.contentWidth, rowHeight)
+
+    let dividerX = x + this.colWidths.castingTime
+    doc.line(dividerX, y, dividerX, y + rowHeight)
+
+    dividerX += this.colWidths.range
+    doc.line(dividerX, y, dividerX, y + rowHeight)
+
+    dividerX += this.colWidths.duration
+    doc.line(dividerX, y, dividerX, y + rowHeight)
+  }
+
+  private renderMetadataCells(
+    doc: jsPDF,
+    spell: Spell,
+    x: number,
+    textY: number,
+    materialLines: string[]
+  ): void {
     doc.setFont('EBGaramond', 'normal')
     doc.setFontSize(FONT_METADATA)
 
-    const colWidth = this.contentWidth / 4
-    let colX = x
-
+    let cellX = x + 1
     if (spell.ritual) {
-      drawSquare(doc, colX, y - ICON_SIZE - 0.3, ICON_SIZE)
-      colX += ICON_SIZE + 1.5
+      drawSquare(doc, cellX, textY - ICON_SIZE - 0.3, ICON_SIZE)
+      cellX += ICON_SIZE + 1
     }
-    doc.text(spell.castingTime, colX, y)
-    colX = x + colWidth
+    doc.text(spell.castingTime, cellX, textY)
 
-    doc.text(spell.range, colX, y)
-    colX = x + colWidth * 2
+    cellX = x + this.colWidths.castingTime + 1
+    doc.text(spell.range, cellX, textY)
 
+    cellX = x + this.colWidths.castingTime + this.colWidths.range + 1
     if (spell.concentration) {
-      drawDiamond(doc, colX, y - ICON_SIZE - 0.3, ICON_SIZE)
-      colX += ICON_SIZE + 1.5
+      drawDiamond(doc, cellX, textY - ICON_SIZE - 0.3, ICON_SIZE)
+      cellX += ICON_SIZE + 1
     }
-    doc.text(spell.duration, colX, y)
+    doc.text(spell.duration, cellX, textY)
 
-    const componentsX = x + colWidth * 3
+    const componentsX = x + this.colWidths.castingTime + this.colWidths.range + this.colWidths.duration + 1
     const components = this.formatComponents(spell)
-    doc.text(components, componentsX, y)
+    doc.text(components, componentsX, textY)
 
-    return y + LINE_HEIGHT_META
-  }
-
-  private renderMaterialDescription(doc: jsPDF, material: string, y: number): number {
-    doc.setFont('EBGaramond', 'italic')
-    doc.setFontSize(FONT_MATERIAL)
-
-    const colWidth = this.contentWidth / 4
-    const materialX = this.format.margins.left + colWidth * 3
-    const maxWidth = colWidth - 2
-    const materialText = `(${material})`
-    const lines = doc.splitTextToSize(materialText, maxWidth)
-
-    for (const line of lines) {
-      doc.text(line, materialX, y)
-      y += LINE_HEIGHT_BODY
+    if (materialLines.length > 0) {
+      doc.setFont('EBGaramond', 'italic')
+      doc.setFontSize(FONT_MATERIAL)
+      let matY = textY + LINE_HEIGHT_BODY
+      for (const line of materialLines) {
+        doc.text(line, componentsX, matY)
+        matY += LINE_HEIGHT_BODY
+      }
     }
-
-    return y
   }
 
   private renderDescription(doc: jsPDF, description: string, x: number, startY: number): number {
@@ -263,18 +336,11 @@ export class BinderPdfAdapter implements PdfAdapter {
   }
 
   private estimateSpellHeight(doc: jsPDF, spell: Spell): number {
+    const headerHeight = GAP_NAME_TO_META
+    const materialLines = this.getMaterialLines(doc, spell)
+    const metadataHeight = this.calculateMetadataRowHeight(materialLines.length) + GAP_AFTER_META
+
     doc.setFontSize(FONT_BODY)
-
-    const headerHeight = LINE_HEIGHT_META
-    const metadataHeight = LINE_HEIGHT_META
-
-    let materialHeight = 0
-    if (spell.components.material && spell.components.materialDescription) {
-      const colWidth = this.contentWidth / 4
-      const lines = doc.splitTextToSize(`(${spell.components.materialDescription})`, colWidth - 2)
-      materialHeight = lines.length * LINE_HEIGHT_BODY
-    }
-
     const descLines = doc.splitTextToSize(spell.description, this.contentWidth).length
     const descHeight = descLines * LINE_HEIGHT_BODY
 
@@ -284,19 +350,20 @@ export class BinderPdfAdapter implements PdfAdapter {
       higherHeight = higherLines * LINE_HEIGHT_BODY
     }
 
-    return headerHeight + metadataHeight + materialHeight + descHeight + higherHeight + SPELL_SPACING + 2
-  }
-
-  private toSmallCaps(text: string): string {
-    return text.toUpperCase()
+    return headerHeight + metadataHeight + descHeight + higherHeight + SPELL_SPACING
   }
 
   private formatLevelSchool(spell: Spell): string {
+    const school = this.toTitleCase(spell.school)
     const levelText =
       spell.level === 0
-        ? `${spell.school} cantrip`
-        : `Level ${spell.level} ${spell.school}`
+        ? `${school} Cantrip`
+        : `Level ${spell.level} ${school}`
     return `(${levelText})`
+  }
+
+  private toTitleCase(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
   }
 
   private formatComponents(spell: Spell): string {

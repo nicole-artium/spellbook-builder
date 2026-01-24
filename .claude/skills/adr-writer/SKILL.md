@@ -50,9 +50,26 @@ What becomes easier or more difficult to do because of this change?
 ## File Naming
 
 - ADR document: `docs/adr/ADR-NNN-kebab-case-title.md`
-- Related mockups: `docs/adr/adr-nnn-related-file.pdf`
+- Mockups: Store in `docs/design/`, link from ADR with relative path `../design/filename.pdf`
+- Working mockups during iteration: `docs/mockups/` (clean up after finalizing)
 
 ## Writing Guidelines
+
+### What ADRs Capture
+
+ADRs document **what** was decided and **why** - not **how** to implement it.
+
+**Include:**
+- The decision and reasoning
+- Trade-offs considered
+- Links to visual mockups
+
+**Do NOT include:**
+- Code snippets or implementation details
+- Step-by-step implementation instructions
+- Specific function/method names
+
+If implementation guidance is needed, create a separate temporary file (e.g., `docs/issue-NN-implementation-plan.md`) that can be deleted after the work is complete.
 
 ### Context Section
 - Describe the problem or need
@@ -64,13 +81,26 @@ What becomes easier or more difficult to do because of this change?
 - State the choice clearly
 - Organize by category if multiple aspects (layout, typography, etc.)
 - Use bullet points for scanability
-- Reference mockups with relative links: `See [mockup PDF](adr-nnn-mockup.pdf)`
+- Reference mockups in docs/design/: `See [mockup PDF](../design/filename.pdf)`
 
 ### Consequences Section
 - Split into Benefits and Trade-offs
 - Be honest about downsides
-- Consider implementation complexity
 - Note any future considerations
+- Avoid implementation complexity details (put those in a separate plan)
+
+## Integration with Other Skills
+
+When ADRs follow a design interview:
+
+1. **design-interview** gathers requirements and preferences
+2. **pdf-mockup** generates visual comparisons during iteration
+3. Mockups are saved to `docs/mockups/` during iteration
+4. Final approved mockup is copied to `docs/design/`, overwriting previous version
+5. **adr-writer** documents the decisions, linking to `docs/design/`
+6. Clean up `docs/mockups/` working files
+
+This workflow keeps `docs/design/` as the canonical location for approved designs.
 
 ## Example
 
@@ -92,7 +122,7 @@ Implement binder-optimized PDF with:
 - Four-column metadata layout
 - Icons for concentration/ritual
 
-See [mockup PDF](adr-003-mockup.pdf) for visual reference.
+See [mockup PDF](../design/a5-binder-format.pdf) for visual reference.
 
 ## Consequences
 
